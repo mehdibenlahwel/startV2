@@ -2349,13 +2349,14 @@ body{font-family:'Cairo',sans-serif;}
         </button>
 
 <!-- ✅ Stripe Payment Element (يظهر تحت زر الدفع بالبطاقة) -->
-<div id="payment-element-wrapper" style="display:none; max-width:520px; margin:18px auto 0; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,.08); overflow:hidden;">
+<div id="payment-element-wrapper" style="display:none; max-width:520px; margin:18px auto 0; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,.08); overflow:auto;; max-height:80vh;">
   <div id="payment-element-loading" style="padding:14px 16px; text-align:center; font-weight:800; color:#334155; background:#f8fafc; border-bottom:1px solid rgba(0,0,0,.06);">
     جاري تحميل نموذج الدفع...
   </div>
+  <div id="payment-title" style="padding:12px 16px; font-weight:900; color:#0f172a; border-bottom:1px solid rgba(0,0,0,.06); background:#fff;">بيانات الدفع</div>
   <div id="payment-element" style="padding:12px;"></div>
-  <div style="padding: 12px;">
-    <button id="pay-now-btn" class="checkout-button" style="width:100%;" disabled>ادفع الآن</button>
+  <div id="payment-footer" style="position:sticky; bottom:0; background:#ffffff; padding:12px; border-top:1px solid rgba(0,0,0,.06);">
+    <button id="pay-now-btn" class="checkout-button" style="width:100%;" style="width:100%;">ادفع الآن</button>
     <div id="payment-error" style="display:none; margin-top:10px; color:#df1b41; font-weight:700;"></div>
   </div>
 </div>
@@ -2642,15 +2643,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const registrationSuccess = document.getElementById('registrationSuccess');
   const customerForm = document.getElementById('customerForm');
 
-  // اخفاء قسم الدفع عند تعديل أي معلومة في النموذج
-  if (customerForm) {
-    ['input', 'change'].forEach(evt => {
-      customerForm.addEventListener(evt, function() {
-        resetPaymentElement('form-change');
-      }, { passive: true });
-    });
-  }
-
   const cardPaymentBtn = document.getElementById('cardPaymentBtn');
   const cryptoPaymentBtn = document.getElementById('cryptoPaymentBtn');
 
@@ -2668,40 +2660,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // =============================
   // ملاحظة: لا تضع Secret Key هنا أبداً (يكون فقط في API داخل Vercel)
   const STRIPE_PUBLISHABLE_KEY = (window.STRIPE_PUBLISHABLE_KEY || "pk_live_51SZgVvI9ApLCV3DSRYCJGnIMmcgo5abRmQMeueWepxDk3iatJ7WCP5WN0SlNJHn78QmuMdAMD4lwdBXbxcwuZL0G00Zu1hF1vg");
-  const stripe = Stripe(STRIPE_PUBLISHABLE_KEY, { locale: 'ar' });
+  const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 
   let elements = null;
 
 
-
-  // ========================
-  // ✅ Reset / Hide Payment Element when anything changes above
-  // ========================
-  function resetPaymentElement(reason = '') {
-    try {
-      // اخفاء الحاوية
-      const wrapper = document.getElementById('payment-element-wrapper');
-      const loading = document.getElementById('payment-element-loading');
-      const el = document.getElementById('payment-element');
-      const err = document.getElementById('payment-error');
-      const payBtn = document.getElementById('pay-now-btn');
-
-      if (loading) loading.style.display = 'none';
-      if (err) { err.style.display = 'none'; err.textContent = ''; }
-      if (payBtn) { payBtn.disabled = true; payBtn.textContent = 'ادفع الآن'; }
-
-      if (el) el.innerHTML = '';
-      elements = null;
-
-      if (wrapper) wrapper.style.display = 'none';
-
-    } catch (e) {
-      // لا نفعل شيء - منع أي كسر للصفحة
-    }
+  // توحيد أسماء الباقات بين الواجهة والـ API
+  function mapPlanKey(planKey){
+    const map = { basic: 'basic', premium: 'advanced', pro: 'golden' };
+    return map[planKey] || planKey;
   }
+
 async function startPaymentElement(plan, btnEl){
-  // تنظيف أي نموذج سابق قبل إنشاء نموذج جديد
-  resetPaymentElement("start");
   const wrapper = document.getElementById('payment-element-wrapper');
   const mountPoint = document.getElementById('payment-element');
   const loading = document.getElementById('payment-element-loading');
@@ -2711,8 +2681,6 @@ async function startPaymentElement(plan, btnEl){
 
   // إظهار مكان الدفع مباشرة تحت الأزرار
   wrapper.style.display = 'block';
-    const payBtn0 = document.getElementById('pay-now-btn');
-    if(payBtn0){ payBtn0.disabled = true; }
   wrapper.scrollIntoView({behavior:'smooth', block:'center'});
 
   // لودر بسيط داخل المكان
@@ -2737,7 +2705,7 @@ async function startPaymentElement(plan, btnEl){
     const resp = await fetch('/api/create-payment-intent', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ plan })
+      body: JSON.stringify({ plan: mapPlanKey(plan) })
     });
 
     const data = await resp.json();
@@ -2746,74 +2714,18 @@ async function startPaymentElement(plan, btnEl){
     // 2) Appearance API (تخصيص الشكل)
     const appearance = {
       theme: 'stripe',
-      labels: 'above',
-      inputs: 'spaced',
       variables: {
-        direction: 'rtl',
-        fontFamily: 'Cairo, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-        fontSizeBase: '16px',
-
         colorPrimary: '#0097b2',
         colorBackground: '#ffffff',
         colorText: '#121212',
         colorDanger: '#df1b41',
-
-        borderRadius: '16px',
+        fontFamily: 'Cairo, system-ui, sans-serif',
+        borderRadius: '12px',
         spacingUnit: '4px',
       },
       rules: {
-        '.Block': {
-          border: '1px solid rgba(0,0,0,0.08)',
-          boxShadow: '0 12px 30px rgba(0,0,0,0.08)',
-          borderRadius: '16px',
-        },
-
-        '.Tab': {
-          border: '1px solid rgba(0,0,0,0.10)',
-          borderRadius: '14px',
-          padding: '12px 14px',
-          boxShadow: 'none',
-        },
-        '.Tab:hover': {
-          borderColor: 'rgba(0,151,178,0.45)',
-        },
-        '.Tab--selected': {
-          borderColor: '#0097b2',
-          boxShadow: '0 0 0 2px rgba(0,151,178,0.18)',
-        },
-        '.TabLabel': {
-          fontWeight: '800',
-        },
-
-        '.Label': {
-          fontWeight: '800',
-          fontSize: '14px',
-          marginBottom: '8px',
-        },
-
-        '.Input': {
-          border: '1px solid rgba(0,0,0,0.12)',
-          borderRadius: '14px',
-          padding: '14px 14px',
-          boxShadow: 'none',
-        },
-        '.Input:focus': {
-          boxShadow: '0 0 0 3px rgba(0,151,178,0.20)',
-          borderColor: '#0097b2',
-        },
-        '.Input--invalid': {
-          borderColor: '#df1b41',
-          boxShadow: '0 0 0 3px rgba(223,27,65,0.18)',
-        },
-        '.Error': {
-          fontWeight: '800',
-        },
-
-        '.Dropdown': {
-          borderRadius: '14px',
-          border: '1px solid rgba(0,0,0,0.12)',
-          padding: '12px 14px',
-        }
+        '.Input': { padding: '12px' },
+        '.Label': { fontWeight: '700' },
       }
     };
 
@@ -2824,8 +2736,6 @@ async function startPaymentElement(plan, btnEl){
     // تنظيف mount ثم العرض
     mountPoint.innerHTML = '';
     paymentElement.mount('#payment-element');
-      const payBtn = document.getElementById('pay-now-btn');
-      if(payBtn){ payBtn.disabled = false; }
 
     loading.style.display = 'none';
   }catch(err){
@@ -3087,8 +2997,6 @@ if(payNowBtn){
   }
 
   function selectPricingCard(card) {
-    // عند تغيير الباقة: اخفاء الدفع السابق
-    resetPaymentElement('plan-change');
     document.querySelectorAll('.pricing-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
 
@@ -3198,8 +3106,6 @@ if(payNowBtn){
 
 cryptoPaymentBtn.addEventListener('click', function() {
     if (!selectedPlan) { alert('يرجى اختيار باقة أولاً'); return; }
-    // عند اختيار الدفع بالكريبتو: اخفاء قسم البطاقة
-    resetPaymentElement('to-crypto');
     showCryptoSection();
   });
 
