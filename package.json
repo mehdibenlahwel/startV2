@@ -2,8 +2,7 @@
   "name": "start-now",
   "version": "1.0.0",
   "dependencies": {
-    "stripe": "^14.0.0"
+    "stripe": "^14.0.0",
+    "@supabase/supabase-js": "^2.39.5"
   }
-  import { createClient } from '@supabase/supabase-js';
-
 }
