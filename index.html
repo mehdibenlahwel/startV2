@@ -2700,7 +2700,11 @@ async function startPaymentElement(plan, btnEl){
       body: JSON.stringify({ plan })
     });
 
-    const data = await resp.json();
+    const raw = await resp.text();
+let data = {};
+try { data = JSON.parse(raw); } catch(e) {}
+if (!resp.ok) throw new Error(data.error || raw || 'فشل إنشاء عملية الدفع');
+
     if(!resp.ok || data.error) throw new Error(data.error || 'فشل إنشاء عملية الدفع');
 
     // 2) Appearance API (تخصيص الشكل)
