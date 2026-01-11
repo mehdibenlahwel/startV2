@@ -9,9 +9,9 @@ module.exports = async (req, res) => {
 
     // 1) ضع أسعارك هنا (بالسنت)
     const PRICES = {
-      basic: 250,     // مثال: $99.00
-      advanced: 600, // مثال: $199.00
-      golden: 800,   // مثال: $299.00
+      basic: 25000,     // مثال: $99.00
+      advanced: 60000, // مثال: $199.00
+      golden: 80000,   // مثال: $299.00
     };
 
     if (!plan || !PRICES[plan]) {
@@ -35,4 +35,5 @@ return res.status(200).json({
     return res.status(500).json({ error: err.message });
   }
 };
+
 
