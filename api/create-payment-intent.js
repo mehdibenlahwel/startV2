@@ -26,8 +26,13 @@ module.exports = async (req, res) => {
       metadata: { plan },
     });
 
-    return res.status(200).json({ clientSecret: paymentIntent.client_secret });
+return res.status(200).json({
+  clientSecret: paymentIntent.client_secret,
+  amount: paymentIntent.amount,
+  currency: paymentIntent.currency
+});
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 };
+
