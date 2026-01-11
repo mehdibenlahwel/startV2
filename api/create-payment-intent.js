@@ -2,23 +2,24 @@ const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     const { plan } = req.body || {};
 
-    // 1) ضع أسعارك هنا (بالسنت)
+    // عدّل الأسعار هنا (بالسنت)
     const PRICES = {
-      basic: 250,     // مثال: $99.00
-      advanced: 600, // مثال: $199.00
-      golden: 800,   // مثال: $299.00
+      basic: 9900,
+      advanced: 19900,
+      golden: 29900,
     };
 
     if (!plan || !PRICES[plan]) {
       return res.status(400).json({ error: "Plan غير صحيح" });
     }
 
-    // 2) أنشئ PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: PRICES[plan],
       currency: "usd",
