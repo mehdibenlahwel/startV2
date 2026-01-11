@@ -2349,18 +2349,28 @@ body{font-family:'Cairo',sans-serif;}
         </button>
 
 <!-- ✅ Stripe Payment Element (يظهر تحت زر الدفع بالبطاقة) -->
-<div id="payment-element-wrapper" style="display:none; max-width:520px; margin:18px auto 0; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,.08); overflow:auto;; max-height:80vh;">
+<div id="payment-element-wrapper" style="display:none; max-width:520px; margin:18px auto 0; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:18px; box-shadow:0 12px 30px rgba(0,0,0,.08); overflow:hidden; display:flex; flex-direction:column; max-height:80vh;">
   <div id="payment-element-loading" style="padding:14px 16px; text-align:center; font-weight:800; color:#334155; background:#f8fafc; border-bottom:1px solid rgba(0,0,0,.06);">
     جاري تحميل نموذج الدفع...
   </div>
-  <div id="payment-title" style="padding:12px 16px; font-weight:900; color:#0f172a; border-bottom:1px solid rgba(0,0,0,.06); background:#fff;">بيانات الدفع</div>
-  <div id="payment-element" style="padding:12px;"></div>
+
+  <div id="payment-title" style="padding:12px 16px; font-weight:900; font-size:16px; color:#0f172a; border-bottom:1px solid rgba(0,0,0,.06); background:#fff;">
+    بيانات الدفع
+  </div>
+
+  <!-- منطقة قابلة للتمرير لمحتوى Stripe -->
+  <div id="payment-element-scroll" style="padding:12px; overflow:auto; flex:1;">
+    <div id="payment-element"></div>
+  </div>
+
+  <!-- شريط سفلي ثابت للزر + الأخطاء -->
   <div id="payment-footer" style="position:sticky; bottom:0; background:#ffffff; padding:12px; border-top:1px solid rgba(0,0,0,.06);">
-    <button id="pay-now-btn" class="checkout-button" style="width:100%;" style="width:100%;">ادفع الآن</button>
-    <div id="payment-error" style="display:none; margin-top:10px; color:#df1b41; font-weight:700;"></div>
+    <button id="pay-now-btn" class="checkout-button" type="button" style="width:100%;">تأكيد الدفع</button>
+    <div id="payment-error" style="display:none; margin-top:10px; color:#df1b41; font-weight:800;"></div>
   </div>
 </div>
 </div>
+
 <!-- ✅ قسم الدفع بالعملات الرقمية (مطابق للكود الثاني) -->
 <div class="crypto-section" id="cryptoSection">
 <div class="section-header">
@@ -2643,6 +2653,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const registrationSuccess = document.getElementById('registrationSuccess');
   const customerForm = document.getElementById('customerForm');
 
+  // عند تعديل أي معلومة في النموذج: أخفِ الدفع بالبطاقة حتى يُعاد فتحه بالطلب الجديد
+  if(customerForm){
+    customerForm.addEventListener('input', function(){
+      resetCardPaymentSection();
+    });
+    customerForm.addEventListener('change', function(){
+      resetCardPaymentSection();
+    });
+  }
+
+
   const cardPaymentBtn = document.getElementById('cardPaymentBtn');
   const cryptoPaymentBtn = document.getElementById('cryptoPaymentBtn');
 
@@ -2738,6 +2759,12 @@ async function startPaymentElement(plan, btnEl){
     paymentElement.mount('#payment-element');
 
     loading.style.display = 'none';
+
+    const payNowBtn = document.getElementById('pay-now-btn');
+    if(payNowBtn){
+      payNowBtn.disabled = false;
+      payNowBtn.style.display = 'block';
+    }
   }catch(err){
     console.error(err);
     if(errorBox){
@@ -2754,6 +2781,55 @@ async function startPaymentElement(plan, btnEl){
     }
   }
 }
+
+
+// إخفاء/تصفير قسم الدفع بالبطاقة (عند تغيير أي شيء أو الضغط خارج القسم)
+function resetCardPaymentSection(){
+  const wrapper = document.getElementById('payment-element-wrapper');
+  const mountPoint = document.getElementById('payment-element');
+  const loading = document.getElementById('payment-element-loading');
+  const errorBox = document.getElementById('payment-error');
+  const payBtn = document.getElementById('pay-now-btn');
+
+  if(wrapper) wrapper.style.display = 'none';
+  if(mountPoint) mountPoint.innerHTML = '';
+  if(loading){
+    loading.style.display = 'none';
+    loading.textContent = 'جاري تحميل نموذج الدفع...';
+  }
+  if(errorBox){
+    errorBox.style.display = 'none';
+    errorBox.textContent = '';
+  }
+  if(payBtn){
+    payBtn.disabled = true;
+  }
+
+  // تصفير عناصر Stripe حتى نعيد بناءها بشكل صحيح
+  elements = null;
+}
+
+// عند أي نقرة خارج صندوق Stripe: أخفِ القسم
+document.addEventListener('click', function(e){
+  const wrapper = document.getElementById('payment-element-wrapper');
+  if(!wrapper || wrapper.style.display === 'none') return;
+
+  const clickedInside = wrapper.contains(e.target);
+
+  // استثناء: زر البطاقة نفسه أو زر الكريبتو أو عناصر اختيار الباقة (حتى لا يختفي قبل ما نتعامل)
+  const cardBtn = document.getElementById('cardPaymentBtn');
+  const cryptoBtn = document.getElementById('cryptoPaymentBtn');
+
+  const isCardBtn = cardBtn && (e.target === cardBtn || cardBtn.contains(e.target));
+  const isCryptoBtn = cryptoBtn && (e.target === cryptoBtn || cryptoBtn.contains(e.target));
+
+  // أي عنصر مرتبط باختيار باقة أو تعديلها (زر/كرت/راديو)
+  const isPlanControl = e.target.closest && e.target.closest('.pricing-card, .plan-card, [data-plan], input[name="plan"], input[name="package"]');
+
+  if(!clickedInside && !isCardBtn && !isCryptoBtn && !isPlanControl){
+    resetCardPaymentSection();
+  }
+}, true);
 
 // زر "ادفع الآن" داخل نموذج الدفع
 const payNowBtn = document.getElementById('pay-now-btn');
@@ -3003,6 +3079,9 @@ if(payNowBtn){
     selectedPlan = card.getAttribute('data-plan');
     selectedPlanPrice = parseFloat(card.getAttribute('data-price'));
 
+    // عند تغيير الباقة: أخفِ الدفع بالبطاقة حتى يُعاد فتحه بالطلب الجديد
+    resetCardPaymentSection();
+
     cardPaymentBtn.style.display = 'inline-block';
     cryptoPaymentBtn.style.display = 'inline-block';
 
@@ -3105,6 +3184,7 @@ if(payNowBtn){
   });
 
 cryptoPaymentBtn.addEventListener('click', function() {
+    resetCardPaymentSection();
     if (!selectedPlan) { alert('يرجى اختيار باقة أولاً'); return; }
     showCryptoSection();
   });
