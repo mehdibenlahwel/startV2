@@ -2132,6 +2132,107 @@ body{font-family:'Cairo',sans-serif;}
   })();
 
 </script>
+
+<script>
+/* ===== Intilakah: Create Supabase profile on payment buttons ===== */
+(function () {
+  function safeTrim(v) { return (v ?? "").toString().trim(); }
+
+  function normalizePlan(p) {
+    p = safeTrim(p).toLowerCase();
+    if (!p) return "";
+    if (p === "basic" || p.includes("basic") || p.includes("عادية") || p.includes("عاديه")) return "basic";
+    if (p === "pro" || p.includes("pro") || p.includes("احتراف")) return "pro";
+    if (p === "premium" || p.includes("premium") || p.includes("gold") || p.includes("ذهب")) return "premium";
+    return "";
+  }
+
+  function getCustomerDataFromStorage() {
+    try { return JSON.parse(localStorage.getItem("customerRegistrationData") || "null"); }
+    catch (e) { return null; }
+  }
+
+  function buildCreateProfilePayload() {
+    const data = getCustomerDataFromStorage();
+    if (!data) throw new Error("لا توجد بيانات عميل محفوظة. الرجاء تعبئة نموذج التسجيل أولاً.");
+
+    // ✅ mapped from Arabic keys (as stored in customerRegistrationData) to English API payload
+    const firstName = safeTrim(data["الاسم"]);
+    const lastName  = safeTrim(data["الاسم_الأخير"]);
+    const email     = safeTrim(data["البريد_الإلكتروني"]);
+    const phone     = safeTrim(data["رقم_الهاتف"]);
+    const nationality = safeTrim(data["الجنسية"]);
+    const residenceCountry = safeTrim(data["بلد_الإقامة"]);
+
+    const whatsappRaw = safeTrim(data["رقم_الواتساب"]);
+    const whatsapp = (whatsappRaw && whatsappRaw !== "غير محدد") ? whatsappRaw : null;
+
+    const plan = normalizePlan(window.selectedPlan || localStorage.getItem("selectedPlan") || "");
+
+    if (!firstName || !lastName || !email || !phone || !nationality || !residenceCountry || !plan) {
+      throw new Error("بيانات ناقصة: تأكد من تعبئة التسجيل + اختيار الباقة قبل الدفع.");
+    }
+
+    return {
+      first_name: firstName,
+      last_name: lastName,
+      email: email,
+      phone: phone,
+      whatsapp: whatsapp,
+      nationality: nationality,
+      residence_country: residenceCountry,
+      plan: plan
+    };
+  }
+
+  async function createProfileOnce() {
+    if (localStorage.getItem("supabase_profile_created") === "1") {
+      return { ok: true, skipped: true };
+    }
+
+    const payload = buildCreateProfilePayload();
+
+    const resp = await fetch("/api/create-profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const out = await resp.json().catch(() => ({}));
+    if (!resp.ok || !out.ok) {
+      throw new Error(out?.error || "فشل إنشاء حساب العميل في النظام.");
+    }
+
+    localStorage.setItem("supabase_profile_created", "1");
+    if (out?.profile?.id) localStorage.setItem("supabase_profile_id", out.profile.id);
+    return out;
+  }
+
+  function bind() {
+    const payNowBtn = document.getElementById("pay-now-btn");
+    const confirmBtn = document.getElementById("confirmBtn");
+
+    const handler = async () => {
+      try {
+        await createProfileOnce();
+      } catch (e) {
+        console.error(e);
+        alert("تعذر إنشاء حساب العميل في النظام. الرجاء التحقق من البيانات والمحاولة مرة أخرى.\n" + (e?.message || ""));
+      }
+    };
+
+    if (payNowBtn) payNowBtn.addEventListener("click", handler, { capture: true });
+    if (confirmBtn) confirmBtn.addEventListener("click", handler, { capture: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bind);
+  } else {
+    bind();
+  }
+})();
+</script>
+
 </body>
 <body>
 <div class="gradient">
@@ -3113,6 +3214,8 @@ if(payNowBtn){
     card.classList.add('selected');
 
     selectedPlan = card.getAttribute('data-plan');
+    window.selectedPlan = selectedPlan;
+    localStorage.setItem('selectedPlan', selectedPlan);
     selectedPlanPrice = parseFloat(card.getAttribute('data-price'));
 
     // عند تغيير الباقة: أخفِ الدفع بالبطاقة حتى يُعاد فتحه بالطلب الجديد
@@ -3180,7 +3283,13 @@ if(payNowBtn){
 
     localStorage.setItem('customerRegistrationData', JSON.stringify(formData));
 
-    const sentOk = await sendToFormspark(formData);
+    
+    // Reset profile-creation flags for a new registration attempt
+    localStorage.removeItem('supabase_profile_created');
+    localStorage.removeItem('supabase_profile_id');
+    localStorage.removeItem('selectedPlan');
+    window.selectedPlan = "";
+const sentOk = await sendToFormspark(formData);
     if(sentOk){
       registrationSuccess.style.display = 'block';
       // اجعل الإحساس طبيعي: اترك اللودر لحظة ثم اخفِ الزر بسلاسة
