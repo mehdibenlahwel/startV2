@@ -2025,6 +2025,23 @@ body{font-family:'Cairo',sans-serif;}
     #payment-footer{ border-bottom-left-radius:18px !important; border-bottom-right-radius:18px !important; }
     #payment-title{ border-top-left-radius:18px !important; border-top-right-radius:18px !important; }
   }
+
+  /* Fix: country selects not opening (ensure no overlay blocks clicks) */
+#nationality,
+#residence,
+select {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 9999;
+}
+
+/* لو فيه أي لودر/طبقة فوق العناصر (حتى لو invisible) خلّيها ما تلتقط النقر */
+#stripeLoading,
+#cardRedirectLoader,
+.stripe-loading {
+  pointer-events: none !important;
+}
+
 </style>
 
 
