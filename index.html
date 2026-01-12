@@ -1035,6 +1035,44 @@
       line-height: 1.7;
     }
 
+    /* ✅ Crypto redirect loader (after manual confirm) */
+    .crypto-redirect-loader{
+      display:none;
+      margin-top: 20px;
+      padding: 14px 15px;
+      border-radius: 12px;
+      font-weight: 800;
+      text-align: center;
+      background: rgba(0, 151, 178, 0.10);
+      border: 1px solid rgba(0, 151, 178, 0.22);
+      color: #0f7c8a;
+      line-height: 1.7;
+    }
+    .crypto-redirect-dots{
+      display:inline-flex;
+      gap: 6px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .crypto-redirect-dots span{
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      display:inline-block;
+      opacity: .25;
+      animation: cryptoDotBlink .8s infinite ease-in-out;
+    }
+    .crypto-redirect-dots span:nth-child(2){ animation-delay: .15s; }
+    .crypto-redirect-dots span:nth-child(3){ animation-delay: .30s; }
+
+    @keyframes cryptoDotBlink{
+      0%, 100%{ opacity: .25; transform: translateY(0); }
+      50%{ opacity: 1; transform: translateY(-2px); }
+    }
+
+
+
     .crypto-icon-small {
       width: 20px;
       height: 20px;
@@ -2733,11 +2771,12 @@ function buildCreateProfilePayload() {
 <button class="confirm-btn" id="confirmBtn">تم إجراء الدفع</button>
 <button class="reset-btn" id="resetBtn">إعادة تعيين</button>
 </div>
-<div class="confirmation-message" id="confirmationMessage">
-          ✅ تم استلام طلبك بنجاح!<br/>
-          سيتم مراجعة الدفع والتواصل معك خلال 24 ساعة.<br/><br/>
-          البريد: <strong id="userEmail"></strong><br/>
-          رقم العملية: <strong id="transactionId"></strong>
+<div class="confirmation-message" id="confirmationMessage"></div>
+<div class="crypto-redirect-loader" id="cryptoRedirectLoader" aria-live="polite">
+  جاري تحويلك إلى صفحة التأكيد
+  <span class="crypto-redirect-dots" aria-hidden="true">
+    <span></span><span></span><span></span>
+  </span>
 </div>
 <div class="success" id="successMessage"></div>
 <div class="error-general" id="generalError"></div>
@@ -3498,7 +3537,9 @@ cryptoPaymentBtn.addEventListener('click', function() {
   const generateBtnText = document.getElementById('generateBtnText');
   const generateBtnLoading = document.getElementById('generateBtnLoading');
   const confirmationMessage = document.getElementById('confirmationMessage');
-  const addressContainer = document.getElementById('addressContainer');
+  
+  const cryptoRedirectLoader = document.getElementById('cryptoRedirectLoader');
+const addressContainer = document.getElementById('addressContainer');
   const paymentDetails = document.getElementById('paymentDetails');
   const successMessage = document.getElementById('successMessage');
   const generalError = document.getElementById('generalError');
@@ -3981,18 +4022,39 @@ cryptoPaymentBtn.addEventListener('click', function() {
   }
 
   function confirmPayment() {
-    userEmail.textContent = emailInput.value;
+    // ✅ إبقاء العميل في نفس المكان + تحويل إلى confirmation.html بدون عرض رسالة التأكيد داخل نفس الصفحة
+    const currentScrollY = window.scrollY;
 
-    qrContainer.style.display = 'none';
-    addressContainer.style.display = 'none';
-    actionButtons.style.display = 'none';
-    paymentDetails.style.display = 'none';
-    networkSelection.style.display = 'none';
-    addressWarning.style.display = 'none';
-    networkInfo.style.display = 'none';
+    try {
+      // قفل زر التأكيد لتجنب الضغط المتكرر
+      if (confirmBtn) confirmBtn.disabled = true;
 
-    transactionIdEl.textContent = `${transactionId}`;
-    confirmationMessage.style.display = 'block';
+      // إخفاء أقسام العنوان/QR/التفاصيل كما هو، بدون عرض رسالة التأكيد القديمة
+      paymentDetails.style.display = 'none';
+      qrCodeContainer.style.display = 'none';
+      addressContainer.style.display = 'none';
+      actionButtons.style.display = 'none';
+      if (successMessage) successMessage.style.display = 'none';
+      if (generalError) generalError.style.display = 'none';
+      if (networkInfo) networkInfo.style.display = 'none';
+      if (addressWarning) addressWarning.style.display = 'none';
+      if (confirmationMessage) confirmationMessage.style.display = 'none';
+
+      // ✅ إظهار Loader بسيط في نفس مكان قسم الكريبتو
+      if (cryptoRedirectLoader) cryptoRedirectLoader.style.display = 'block';
+
+      // ✅ تأكيد الحفاظ على موضع السك롤 بعد تغييرات DOM
+      requestAnimationFrame(() => window.scrollTo(0, currentScrollY));
+
+      // ✅ تحويل سريع إلى صفحة التأكيد (0.8 ثانية)
+      setTimeout(() => {
+        window.location.href = 'confirmation.html';
+      }, 800);
+
+    } catch (e) {
+      // fallback: في حال أي خطأ، حوّل مباشرة
+      window.location.href = 'confirmation.html';
+    }
   }
 
   // ✅ اختيار العملة
