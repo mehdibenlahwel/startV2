@@ -2204,38 +2204,51 @@ body{font-family:'Cairo',sans-serif;}
     catch (e) { return null; }
   }
 
-  function buildCreateProfilePayload() {
-    const data = getCustomerDataFromStorage();
-    if (!data) throw new Error("لا توجد بيانات عميل محفوظة. الرجاء تعبئة نموذج التسجيل أولاً.");
+ function buildCreateProfilePayload() {
+  const data = getCustomerDataFromStorage();
+  if (!data) throw new Error("لا توجد بيانات عميل محفوظة. الرجاء تعبئة نموذج التسجيل أولاً.");
 
-    // ✅ mapped from Arabic keys (as stored in customerRegistrationData) to English API payload
-    const firstName = safeTrim(data["الاسم"]);
-    const lastName  = safeTrim(data["الاسم_الأخير"]);
-    const email     = safeTrim(data["البريد_الإلكتروني"]);
-    const phone     = safeTrim(data["رقم_الهاتف"]);
-    const nationality = safeTrim(data["الجنسية"]);
-    const residenceCountry = safeTrim(data["بلد_الإقامة"]);
+  // ✅ mapped from Arabic keys (as stored in customerRegistrationData) to English API payload
+  const firstName = safeTrim(data["الاسم"]);
+  const lastName  = safeTrim(data["الاسم_الأخير"]);
+  const email     = safeTrim(data["البريد_الإلكتروني"]);
+  const phone     = safeTrim(data["رقم_الهاتف"]);
+  const nationality = safeTrim(data["الجنسية"]);
+  const residenceCountry = safeTrim(data["بلد_الإقامة"]);
 
-    const whatsappRaw = safeTrim(data["رقم_الواتساب"]);
-    const whatsapp = (whatsappRaw && whatsappRaw !== "غير محدد") ? whatsappRaw : null;
+  // ✅ NEW: fields موجودة في الفورم ومخزنة في localStorage لكنها كانت لا تُرسل للسيرفر
+  const birthday = safeTrim(data["تاريخ_الميلاد"]); // YYYY-MM-DD
+  const sexe = safeTrim(data["الجنس"]);             // من select
 
-    const plan = normalizePlan(window.selectedPlan || localStorage.getItem("selectedPlan") || "");
+  const addressRaw = safeTrim(data["العنوان_الكامل"]);
+  const adress = (addressRaw && addressRaw !== "غير محدد") ? addressRaw : null; // عمود Supabase اسمه adress
 
-    if (!firstName || !lastName || !email || !phone || !nationality || !residenceCountry || !plan) {
-      throw new Error("بيانات ناقصة: تأكد من تعبئة التسجيل + اختيار الباقة قبل الدفع.");
-    }
+  const whatsappRaw = safeTrim(data["رقم_الواتساب"]);
+  const whatsapp = (whatsappRaw && whatsappRaw !== "غير محدد") ? whatsappRaw : null;
 
-    return {
-      first_name: firstName,
-      last_name: lastName,
-      email: email,
-      phone: phone,
-      whatsapp: whatsapp,
-      nationality: nationality,
-      residence_country: residenceCountry,
-      plan: plan
-    };
+  const plan = normalizePlan(window.selectedPlan || localStorage.getItem("selectedPlan") || "");
+
+  // ملاحظة: الفورم عندك أصلاً يفرض birthday + sexe (validation)
+  if (!firstName || !lastName || !email || !phone || !nationality || !residenceCountry || !plan || !birthday || !sexe) {
+    throw new Error("بيانات ناقصة: تأكد من تعبئة التسجيل + اختيار الباقة قبل الدفع.");
   }
+
+  return {
+    first_name: firstName,
+    last_name: lastName,
+    email: email,
+    phone: phone,
+    whatsapp: whatsapp,
+    nationality: nationality,
+    residence_country: residenceCountry,
+    plan: plan,
+
+    // ✅ NEW: نرسلهم كما هي أسماء أعمدة Supabase
+    sexe: sexe,
+    birthday: birthday,
+    adress: adress
+  };
+}
 
   async function createProfileOnce() {
     if (localStorage.getItem("supabase_profile_created") === "1") {
