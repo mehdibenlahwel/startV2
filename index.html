@@ -381,138 +381,6 @@
     }
     #networkSelection label{font-weight:800;}
 
-
-/* Crypto redirect loader */
-.crypto-redirect-loader{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  margin-top:16px;
-  padding:14px 16px;
-  border-radius:14px;
-  background:#ffffff;
-  box-shadow:0 8px 22px rgba(0,0,0,.08);
-  font-family:Cairo, sans-serif;
-}
-.crypto-spinner{
-  width:18px;
-  height:18px;
-  border:3px solid rgba(0,109,128,.25);
-  border-top-color:#006d80;
-  border-radius:50%;
-  display:inline-block;
-  animation: cryptoSpin .8s linear infinite;
-}
-.crypto-loading-text{
-  font-size:14px;
-  opacity:.9;
-}
-@keyframes cryptoSpin{ to{ transform: rotate(360deg);} }
-
-
-/* =========================================================
-   Button unification (page buttons only - excluding header/footer)
-   - Make all main action buttons same height/typography
-   - Align crypto Generate/Confirm colors with primary gradient
-   ========================================================= */
-:root{
-  --ai-btn-grad-primary: linear-gradient(135deg, #0097b2 0%, #006d80 100%);
-  --ai-btn-grad-dark: linear-gradient(135deg, #2c2c2c 0%, #121212 100%);
-}
-
-#registrationSubmitBtn,
-#backToFormBtn,
-#cardPaymentBtn,
-#cryptoPaymentBtn,
-#pay-now-btn,
-#generateBtn,
-#confirmBtn,
-#resetBtn,
-.copy-btn{
-  font-family: 'Cairo', sans-serif !important;
-  font-weight: 700 !important;
-  border-radius: 12px !important;
-  padding: 14px 18px !important;
-  min-height: 52px !important;
-  line-height: 1.1 !important;
-  letter-spacing: 0 !important;
-  border: none !important;
-  cursor: pointer;
-  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
-}
-
-#registrationSubmitBtn,
-#cardPaymentBtn,
-#cryptoPaymentBtn,
-#pay-now-btn,
-#generateBtn,
-#confirmBtn{
-  background: var(--ai-btn-grad-primary) !important;
-  color: #fff !important;
-}
-
-#backToFormBtn,
-#resetBtn{
-  background: var(--ai-btn-grad-dark) !important;
-  color: #fff !important;
-}
-
-#registrationSubmitBtn:hover:not(:disabled),
-#backToFormBtn:hover:not(:disabled),
-#cardPaymentBtn:hover:not(:disabled),
-#cryptoPaymentBtn:hover:not(:disabled),
-#pay-now-btn:hover:not(:disabled),
-#generateBtn:hover:not(:disabled),
-#confirmBtn:hover:not(:disabled),
-#resetBtn:hover:not(:disabled),
-.copy-btn:hover:not(:disabled){
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(0,0,0,.14);
-}
-
-#registrationSubmitBtn:disabled,
-#backToFormBtn:disabled,
-#cardPaymentBtn:disabled,
-#cryptoPaymentBtn:disabled,
-#pay-now-btn:disabled,
-#generateBtn:disabled,
-#confirmBtn:disabled,
-#resetBtn:disabled,
-.copy-btn:disabled{
-  opacity: .65 !important;
-  cursor: not-allowed !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-/* Exclude header/footer component buttons explicitly (safety) */
-header-menu-startnow button,
-ai-footer-startnow button{
-  min-height: unset !important;
-  padding: unset !important;
-  border-radius: unset !important;
-  font-weight: unset !important;
-  box-shadow: unset !important;
-  transform: unset !important;
-}
-
-
-/* =========================================================
-   Fix: country dropdown (select) not opening
-   - Ensure selects are clickable and above any overlays
-   ========================================================= */
-#nationality, #residence, .country-select, select{
-  pointer-events: auto !important;
-  position: relative;
-  z-index: 9999;
-}
-
-/* Ensure any loaders/overlays don't block clicks when present */
-#stripeLoading, #cardRedirectLoader, .stripe-loading, .overlay, .modal-overlay{
-  pointer-events: none !important;
-}
-
 </style><style>
     /* ==========================================================
        ✅ Base CSS Fixes (بديل ستايلات Shopify Theme)
@@ -597,6 +465,7 @@ ai-footer-startnow button{
     .enqulab-form-step.active { display: block; }
 
     .form-disabled input,
+    .form-disabled select,
     .form-disabled textarea,
     .form-disabled button {
       opacity: 0.7;
@@ -2668,11 +2537,6 @@ body{font-family:'Cairo',sans-serif;}
   <!-- شريط سفلي ثابت للزر + الأخطاء -->
   <div id="payment-footer" style="position:relative; background:#ffffff; padding:14px 16px 16px; border-top:1px solid rgba(0,0,0,.06); border-bottom-left-radius:22px; border-bottom-right-radius:22px;">
     <button id="pay-now-btn" class="checkout-button" type="button" style="width:100%; margin-top:4px;">تأكيد الدفع</button>
-    <div id="cardRedirectLoader" class="crypto-redirect-loader" style="display:none; justify-content:center; margin-top:12px;">
-      <span class="crypto-spinner" aria-hidden="true"></span>
-      <span class="crypto-loading-text">جارٍ تحويلك إلى صفحة التأكيد…</span>
-    </div>
-
     <div id="payment-error" style="display:none; margin-top:10px; color:#df1b41; font-weight:800;"></div>
   </div>
 </div>
@@ -2780,17 +2644,12 @@ body{font-family:'Cairo',sans-serif;}
 <button class="confirm-btn" id="confirmBtn">تم إجراء الدفع</button>
 <button class="reset-btn" id="resetBtn">إعادة تعيين</button>
 </div>
-<div class="confirmation-message" id="confirmationMessage" style="display:none;">
+<div class="confirmation-message" id="confirmationMessage">
           ✅ تم استلام طلبك بنجاح!<br/>
           سيتم مراجعة الدفع والتواصل معك خلال 24 ساعة.<br/><br/>
           البريد: <strong id="userEmail"></strong><br/>
           رقم العملية: <strong id="transactionId"></strong>
 </div>
-<div id="cryptoRedirectLoader" class="crypto-redirect-loader" style="display:none;">
-  <span class="crypto-spinner" aria-hidden="true"></span>
-  <span class="crypto-loading-text">جارٍ تحويلك إلى صفحة التأكيد…</span>
-</div>
-
 <div class="success" id="successMessage"></div>
 <div class="error-general" id="generalError"></div>
 </div>
@@ -3169,9 +3028,21 @@ document.addEventListener('click', function(e){
 const payNowBtn = document.getElementById('pay-now-btn');
 if(payNowBtn){
   payNowBtn.addEventListener('click', async function(){
-    // ✅ واجهة: أظهر لودر بسيط أثناء معالجة الدفع
-    const cardLoader2 = document.getElementById('cardRedirectLoader');
-    if (cardLoader2) cardLoader2.style.display = 'flex';
+    const errorBox = document.getElementById('payment-error');
+    if(errorBox){
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+    }
+
+    if(!elements){
+      if(errorBox){
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'يرجى اختيار الباقة ثم الضغط على زر الدفع بالبطاقة أولاً.';
+      }else{
+        alert('يرجى اختيار الباقة ثم الضغط على زر الدفع بالبطاقة أولاً.');
+      }
+      return;
+    }
 
     payNowBtn.disabled = true;
     const oldText = payNowBtn.innerHTML;
@@ -3180,27 +3051,9 @@ if(payNowBtn){
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // ✅ التحويل إلى صفحة التأكيد يتم فقط عند نجاح Stripe
         return_url: `${window.location.origin}/confirmation.html`,
       }
     });
-
-    // إذا كان هناك خطأ (فشل الدفع) لن يتم التحويل
-    if (error) {
-      if (cardLoader2) cardLoader2.style.display = 'none';
-      payNowBtn.disabled = false;
-      payNowBtn.innerHTML = oldText;
-
-      if (errorBox) {
-        errorBox.style.display = 'block';
-        errorBox.textContent = error.message || 'تعذر إتمام الدفع. حاول مرة أخرى.';
-      } else {
-        alert(error.message || 'تعذر إتمام الدفع. حاول مرة أخرى.');
-      }
-    }
-    // في حالة النجاح، Stripe سيحوّل تلقائيًا إلى return_url.
-  });const cardLoader2 = document.getElementById('cardRedirectLoader');
-      if (cardLoader2) cardLoader2.style.display = 'none';
 
     if(error){
       if(errorBox){
@@ -3556,9 +3409,7 @@ cryptoPaymentBtn.addEventListener('click', function() {
   const generateBtnText = document.getElementById('generateBtnText');
   const generateBtnLoading = document.getElementById('generateBtnLoading');
   const confirmationMessage = document.getElementById('confirmationMessage');
-  
-  const cryptoRedirectLoader = document.getElementById('cryptoRedirectLoader');
-const addressContainer = document.getElementById('addressContainer');
+  const addressContainer = document.getElementById('addressContainer');
   const paymentDetails = document.getElementById('paymentDetails');
   const successMessage = document.getElementById('successMessage');
   const generalError = document.getElementById('generalError');
@@ -4051,13 +3902,8 @@ const addressContainer = document.getElementById('addressContainer');
     addressWarning.style.display = 'none';
     networkInfo.style.display = 'none';
 
-    // لا نعرض رسالة النجاح هنا - فقط نُظهر لودر ثم نحول المستخدم
-    if (cryptoRedirectLoader) cryptoRedirectLoader.style.display = 'flex';
-
-    // تحويل إلى صفحة التأكيد
-    setTimeout(() => {
-      window.location.href = '/confirmation.html';
-    }, 600);
+    transactionIdEl.textContent = `${transactionId}`;
+    confirmationMessage.style.display = 'block';
   }
 
   // ✅ اختيار العملة
