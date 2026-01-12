@@ -1,9 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-
-
 const PACKAGE_ID_BY_PLAN = {
-  // ✅ استبدل هذه القيم بـ UUIDs الفعلية من جدول packages عندك
+  // ✅ استبدل هذه القيم بـ UUIDs الفعلية من جدول packages عندك (هي نفسها الموجودة في ملفك الحالي)
   basic: "978b133e-6e14-4edf-aa44-133d11fb2929",
   pro: "a1095068-a87d-4828-827e-cbfac0f0e736",
   premium: "4b562e5d-0fef-4389-9d31-909c3f60b19c",
@@ -13,6 +11,10 @@ function json(res, status, payload) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.end(JSON.stringify(payload));
+}
+
+function safeTrim(v) {
+  return (v ?? '').toString().trim();
 }
 
 export default async function handler(req, res) {
@@ -36,18 +38,26 @@ export default async function handler(req, res) {
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
-    const firstName = (body?.first_name || '').trim();
-    const lastName = (body?.last_name || '').trim();
-    const email = (body?.email || '').trim();
-    const phone = (body?.phone || '').trim();
-    const whatsapp = (body?.whatsapp || '').trim();
-    const nationality = (body?.nationality || '').trim();
-    const residenceCountry = (body?.residence_country || '').trim();
-    const plan = (body?.plan || '').trim(); // basic | pro | premium
+    // Required (كما كان)
+    const firstName = safeTrim(body?.first_name);
+    const lastName = safeTrim(body?.last_name);
+    const email = safeTrim(body?.email);
+    const phone = safeTrim(body?.phone);
+    const whatsapp = safeTrim(body?.whatsapp);
+    const nationality = safeTrim(body?.nationality);
+    const residenceCountry = safeTrim(body?.residence_country);
+    const plan = safeTrim(body?.plan); // basic | pro | premium
 
-    if (!firstName || !lastName || !email || !phone || !nationality || !residenceCountry || !plan) {
+    // ✅ NEW: حقول كانت لا تُرسل/لا تُحفظ
+    const sexe = safeTrim(body?.sexe);          // profiles.sexe
+    const birthday = safeTrim(body?.birthday);  // profiles.birthday (date: YYYY-MM-DD)
+    const adressRaw = safeTrim(body?.adress);   // profiles.adress
+    const adress = (adressRaw && adressRaw !== 'غير محدد') ? adressRaw : null;
+
+    // عندك في الفورم birthday + sexe إجبارية، فنعتبرها Required هنا أيضاً
+    if (!firstName || !lastName || !email || !phone || !nationality || !residenceCountry || !plan || !sexe || !birthday) {
       return json(res, 400, {
-        error: 'Missing required fields. Required: first_name, last_name, email, phone, nationality, residence_country, plan',
+        error: 'Missing required fields. Required: first_name, last_name, email, phone, nationality, residence_country, plan, sexe, birthday',
       });
     }
 
@@ -56,7 +66,7 @@ export default async function handler(req, res) {
       return json(res, 400, { error: 'Invalid plan. Must be one of: basic, pro, premium.' });
     }
 
-    // ⚠️ نُدخل فقط الأعمدة المؤكدة في جدول profiles لتفادي أخطاء "column does not exist"
+    // ✅ ندخل أعمدة جدول profiles الحقيقية
     const profilePayload = {
       full_name: `${firstName} ${lastName}`.trim(),
       email,
@@ -65,18 +75,23 @@ export default async function handler(req, res) {
       country: nationality,
       residance_country: residenceCountry,
       package_id: packageId,
-      // ملاحظة: لا نرسل created_at لأنه غالبًا Default في DB
-      // ولا نرسل is_admin لأنه يجب أن يبقى false افتراضيًا
+
+      // ✅ NEW fields
+      sexe: sexe,
+      birthday: birthday,
+      adress: adress,
+
+      // ملاحظة: created_at غالباً Default في DB
+      // is_admin لا نرسله ليبقى false افتراضياً
     };
 
     const { data, error } = await supabase
       .from('profiles')
       .insert(profilePayload)
-      .select('id, full_name, email, package_id')
+      .select('id, full_name, email, package_id, sexe, birthday, adress')
       .single();
 
     if (error) {
-      // في حال تعارض RLS أو أي خطأ
       return json(res, 400, { error: error.message, details: error });
     }
 
