@@ -3001,8 +3001,6 @@ async function startPaymentElement(plan, btnEl){
 
   // إظهار مكان الدفع مباشرة تحت الأزرار
   wrapper.style.display = 'block';
-  // إخفاء مراحل بناء Stripe وإظهار الواجهة دفعة واحدة عند الجاهزية
-  wrapper.setAttribute('data-state','loading');
   wrapper.scrollIntoView({behavior:'smooth', block:'center'});
 
   // لودر بسيط داخل المكان
@@ -3078,18 +3076,13 @@ async function startPaymentElement(plan, btnEl){
     mountPoint.innerHTML = '';
     paymentElement.mount('#payment-element');
 
-    // لا تُخفِ اللودر هنا: Stripe قد يرسم تدريجياً بعد mount
-    // ننتظر حدث الجاهزية ثم نُظهر العنصر دفعة واحدة لتفادي "الظهور على مراحل"
-    paymentElement.on('ready', () => {
-      wrapper.setAttribute('data-state','ready');
-      loading.style.display = 'none';
+    loading.style.display = 'none';
 
-      const payNowBtn = document.getElementById('pay-now-btn');
-      if(payNowBtn){
-        payNowBtn.disabled = false;
-        payNowBtn.style.display = 'block';
-      }
-    });
+    const payNowBtn = document.getElementById('pay-now-btn');
+    if(payNowBtn){
+      payNowBtn.disabled = false;
+      payNowBtn.style.display = 'block';
+    }
   }catch(err){
     console.error(err);
     if(errorBox){
